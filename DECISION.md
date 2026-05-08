@@ -1,97 +1,134 @@
-# Decisions.md
+# DECISIONS.md
 
 # Core Stack Decisions
 
-* Prisma v6 instead of v7
-* Prisma classic generator
-* NextAuth v4 instead of v5
-* Neon PostgreSQL
-* JWT auth strategy
-* Credentials login only
-* No Prisma Adapter
-* App Router only
-* React Server Components by default
-
----
-
-# Auth Decisions
-
-* Use getServerSession pattern
-* Use middleware only for route protection
-* Authorization must still happen on server
-* Use RBAC architecture
-* Use typed session augmentation
-* Use JWT-based session strategy
-
----
-
-# Database Decisions
-
-* Singleton Prisma client
-* Prefer server-side Prisma queries
-* Avoid client-side database fetching
-* Add database indexes for scalability
+* Use Next.js 16 App Router
+* Use React 19
+* Use Prisma v6 instead of v7
+* Use Prisma classic generator
+* Use Neon PostgreSQL
+* Use NextAuth v4 instead of v5
+* Use JWT session strategy
+* Use Credentials login only
+* Do not use Prisma Adapter
 
 ---
 
 # Architecture Decisions
 
-* Feature-first architecture
-* Avoid monolithic lib/actions folders
-* Prefer modular feature structure
-* Avoid unnecessary API routes
+* Use App Router only
+* Use React Server Components by default
+* Prefer server-first architecture
+* Avoid unnecessary client-side rendering
+* Prefer modular feature-based structure
+* Avoid monolithic architecture
 * Prefer Server Actions over REST endpoints
 
 ---
 
-# UI Decisions
+# Database Decisions
 
-* Use shadcn/ui
-* Dashboard layout first before CRUD
-* Responsive-first architecture
-* Shared sidebar system
+* Use singleton Prisma client
+* Prefer server-side database access
+* Avoid database fetching from client
+* Use Prisma select optimization
+* Add relational indexes for scalability
+
+---
+
+# Authentication Decisions
+
+* Use getServerSession pattern
+* Use centralized session helper
+* Middleware only for route protection
+* Authorization must still happen server-side
+* Use RBAC architecture
+* Use typed session augmentation
 
 ---
 
 # Dashboard Decisions
 
 * Use route groups for dashboard isolation
-* Use centralized navigation config
 * Use shared dashboard layout
-* Use server-side session injection
-* Use role-based dashboard architecture
-* Sidebar should be config-driven
-* Dashboard layout should remain reusable
-* Header/Navbar should be shared
-* Session validation must happen server-side
-* Dashboard pages should remain Server Components by default
+* Use centralized navigation config
+* Sidebar must be role-aware
+* Dashboard layout must remain reusable
+* Session injection should happen server-side
+* Dashboard pages remain Server Components by default
+* Mobile sidebar should use Sheet component
 
 ---
 
-# Session Decisions
+# UI Decisions
 
-* Session access should use lib/session.ts helper
-* Do not access NextAuth directly in many places
-* Prefer centralized auth utilities
-* Session should be injected from server layouts
+* Use shadcn/ui as UI foundation
+* Use Tailwind CSS utility-first styling
+* Keep UI primitives inside components/ui
+* Prefer composition over prop-heavy APIs
+* Use responsive-first layout strategy
+* Build dashboard foundation before CRUD
+
+---
+
+# Data Table Decisions
+
+* Use TanStack Table
+* Use reusable generic DataTable
+* Keep table feature-agnostic
+* Feature-specific columns stay inside features/*
+* Use folder namespace naming strategy
+* Avoid redundant file naming
+
+---
+
+# Form Decisions
+
+* Use React Hook Form
+* Use Zod validation
+* Infer types from Zod schemas
+* Validate all server actions
+* Use reusable form field architecture
+
+---
+
+# Academic Structure Decisions
+
+* Focus current system on STMIK / Sekolah Tinggi
+* Do not implement Fakultas abstraction yet
+* Use Program Studi based structure
+* Avoid premature multi-institution architecture
+* Prioritize simplicity over premature flexibility
 
 ---
 
 # Navigation Decisions
 
-* Sidebar navigation should be role-aware
-* Navigation config should be centralized
-* Avoid hardcoded navigation items
-* Sidebar active state should use pathname
+* Navigation must be centralized
+* Sidebar navigation must be config-driven
+* Avoid hardcoded navigation
+* Use pathname-based active navigation
+
+---
+
+# Performance Decisions
+
+* Minimize use client usage
+* Prefer Server Components whenever possible
+* Avoid unnecessary hydration
+* Keep middleware lightweight
+* Keep JWT callbacks lightweight
+* Use loading boundaries properly
 
 ---
 
 # Security Decisions
 
 * Never trust frontend authorization
-* Role validation must happen server-side
-* Middleware is not final authorization layer
-* Sensitive data must stay server-side
+* Authorization must happen server-side
+* Keep sensitive logic server-only
+* Never expose sensitive env variables
+* Never commit .env
 
 ---
 
@@ -99,15 +136,15 @@
 
 Current phase:
 
-* Dashboard Foundation
+* Reusable CRUD Foundation
 
 Next priorities:
 
-1. Shared dashboard layout
-2. Sidebar/Navbar
-3. Role-based dashboard routing
-4. Logout flow
-5. Dashboard overview pages
-6. Master data CRUD
-7. Generic table system
-8. Reusable form system
+1. Reusable DataTable
+2. Reusable form system
+3. Program Studi CRUD
+4. Mahasiswa CRUD
+5. Dosen CRUD
+6. Mata Kuliah CRUD
+7. Generic search/filter system
+8. Audit logging system

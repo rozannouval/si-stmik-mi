@@ -1,12 +1,20 @@
+import {
+  LayoutDashboard,
+  Users,
+  BookOpen,
+} from "lucide-react";
+
 export const navigation = {
   ADMIN: [
     {
       label: "Dashboard",
       href: "/dashboard/admin",
+      icon: LayoutDashboard,
     },
     {
       label: "Mahasiswa",
       href: "/dashboard/admin/mahasiswa",
+      icon: Users,
     },
   ],
 
@@ -14,6 +22,7 @@ export const navigation = {
     {
       label: "Dashboard",
       href: "/dashboard/dosen",
+      icon: LayoutDashboard,
     },
   ],
 
@@ -21,6 +30,7 @@ export const navigation = {
     {
       label: "Dashboard",
       href: "/dashboard/mahasiswa",
+      icon: BookOpen,
     },
   ],
 };

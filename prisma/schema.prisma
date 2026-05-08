@@ -23,3 +23,20 @@ enum Role {
   DOSEN
   MAHASISWA
 }
+
+enum DegreeType {
+  D3
+  D4
+  S1
+  S2
+}
+
+model ProgramStudy {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  degree    DegreeType
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
