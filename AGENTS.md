@@ -20,11 +20,11 @@ Architecture goals:
 * Next.js 16
 * React 19
 * TypeScript strict mode
-* Prisma 6.16.3
+* Prisma 6.16.3 (BUKAN v7 — jangan gunakan prisma.config.ts atau sintaks v7)
 * Neon PostgreSQL
 * NextAuth v4
 * Tailwind CSS
-* Shadcn/UI
+* Shadcn/UI (versi terbaru — gunakan komponen Field, bukan FormField lama)
 * Radix UI
 * TanStack Table
 * Zod
@@ -34,13 +34,34 @@ Architecture goals:
 
 ---
 
+# Critical Notes (Baca Sebelum Generate Kode)
+
+## Prisma
+* Gunakan Prisma v6 — BUKAN v7
+* JANGAN generate atau sarankan file `prisma.config.ts` (itu fitur v7)
+* Perintah yang valid: `npx prisma generate` dan `npx prisma migrate dev`
+* Gunakan singleton Prisma client di `lib/prisma.ts`
+
+## Shadcn/UI
+* Versi terbaru shadcn TIDAK memiliki komponen `Form` dengan `FormField`, `FormItem`, `FormLabel`, `FormMessage`
+* Untuk form, gunakan komponen `Field` dari `@/components/ui/field`
+* Install: `npx shadcn@latest add field`
+* Gunakan `Controller` dari react-hook-form + `Field`, `FieldLabel`, `FieldError` dari shadcn
+* JANGAN import dari `@/components/ui/form` — file itu tidak ada
+
+## Windows / EPERM Error
+* Saat `npx prisma generate` error EPERM di Windows: matikan dev server dulu, baru jalankan ulang
+* File `.dll` Prisma dikunci proses Node — selalu stop server sebelum generate
+
+---
+
 # Core Architecture Rules
 
 ## Rendering Strategy
 
 * App Router only
 * React Server Components by default
-* Client Components only for interactivity
+* Client Components only untuk interactivity
 * Prefer async server pages
 * Avoid unnecessary hydration
 * Prefer server-first architecture
@@ -67,9 +88,9 @@ Avoid:
 ## Database Rules
 
 * Prisma v6 only
-* Use prisma-client-js
-* Use singleton Prisma client
-* No Prisma v7 config system
+* Use prisma-client-js generator
+* Use singleton Prisma client di `lib/prisma.ts`
+* No Prisma v7 config system — tidak ada `prisma.config.ts`
 * Prefer select/include optimization
 * Add indexes for scalability
 * Prefer server-side Prisma access
@@ -105,38 +126,209 @@ Roles:
 
 # Folder Structure
 
+```
 app/
 components/
+  data-table/
+    index.tsx
+    toolbar.tsx
+    pagination.tsx
+    empty-state.tsx
+    types.ts
+  form/
+    input-field.tsx
+    select-field.tsx
+    textarea-field.tsx
+    submit-button.tsx
+  ui/              ← shadcn primitives only
 features/
 lib/
 prisma/
 types/
+```
 
 ---
 
 # Feature Structure Rules
 
-Features should scale modularly:
-
+```
 features/
-auth/
-dashboard/
-program-studi/
-mahasiswa/
-dosen/
-mata-kuliah/
-kelas/
-jadwal/
-krs/
-nilai/
+  auth/
+  dashboard/
+  program-studi/
+    actions/
+    components/
+    schemas/
+    types/
+    constants/
+  mahasiswa/
+  dosen/
+  mata-kuliah/
+  kelas/
+  jadwal/
+  krs/
+  nilai/
+```
 
-Each feature may contain:
+---
 
-actions/
-components/
-schemas/
-types/
-constants/
+# Shadcn Form Pattern (WAJIB DIIKUTI)
+
+Jangan gunakan pola lama. Gunakan pola ini:
+
+```tsx
+"use client"
+
+import { Controller, useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { Field, FieldLabel, FieldError } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import * as z from "zod"
+
+const schema = z.object({ nama: z.string().min(1) })
+
+export function ContohForm() {
+  const form = useForm({ resolver: zodResolver(schema) })
+
+  return (
+    <form onSubmit={form.handleSubmit(console.log)}>
+      <Controller
+        name="nama"
+        control={form.control}
+        render={({ field, fieldState }) => (
+          <Field data-invalid={fieldState.invalid}>
+            <FieldLabel htmlFor="nama">Nama</FieldLabel>
+            <Input {...field} id="nama" aria-invalid={fieldState.invalid} />
+            {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+          </Field>
+        )}
+      />
+    </form>
+  )
+}
+```
+
+---
+
+# Reusable Components — Status
+
+## components/data-table/ ✅ SELESAI
+
+File yang sudah ada:
+* `index.tsx` — generic DataTable dengan TanStack Table
+* `toolbar.tsx` — search input, menerima `searchKey` dan `searchPlaceholder`
+* `pagination.tsx` — navigasi halaman + rows per page selector
+* `empty-state.tsx` — state kosong dengan icon FileX
+* `types.ts` — DataTableProps, DataTableToolbarProps, DataTablePaginationProps
+
+Cara pakai:
+```tsx
+<DataTable
+  columns={columns}
+  data={data}
+  searchKey="nama"
+  searchPlaceholder="Cari program studi..."
+/>
+```
+
+## components/form/ ✅ SELESAI
+
+File yang sudah ada (semua menggunakan `Field` dari shadcn terbaru + `Controller` dari react-hook-form):
+* `input-field.tsx` — InputField component
+* `select-field.tsx` — SelectField dengan options array
+* `textarea-field.tsx` — TextareaField
+* `submit-button.tsx` — SubmitButton dengan loading state dari `formState.isSubmitting`
+
+Cara pakai (wajib wrap dengan FormProvider):
+```tsx
+const form = useForm({ resolver: zodResolver(schema) })
+
+<FormProvider {...form}>
+  <form onSubmit={form.handleSubmit(onSubmit)}>
+    <InputField name="nama" label="Nama" placeholder="..." />
+    <SelectField name="jenjang" label="Jenjang" options={[...]} />
+    <SubmitButton />
+  </form>
+</FormProvider>
+```
+
+---
+
+# Prisma Schema — Status
+
+## Model yang sudah ada: ✅ ProgramStudi
+
+```prisma
+model ProgramStudi {
+  id        String   @id @default(cuid())
+  kode      String   @unique
+  nama      String
+  jenjang   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("program_studi")
+}
+```
+
+Migration sudah dijalankan. Tabel sudah ada di database.
+
+---
+
+# Feature Progress
+
+## features/program-studi/ — IN PROGRESS
+
+### Sudah ada:
+* `types/index.ts` — type ProgramStudi { id, kode, nama, jenjang }
+* `actions/get-program-studi.ts` — getProgramStudiList(), getProgramStudiById(id)
+* `components/columns.tsx` — ColumnDef untuk DataTable (kode, nama, jenjang, actions)
+
+### Belum ada (next step):
+* `schemas/index.ts` — Zod schema untuk create/update
+* `actions/create-program-studi.ts` — Server Action create
+* `actions/update-program-studi.ts` — Server Action update
+* `actions/delete-program-studi.ts` — Server Action delete
+* `components/program-studi-form.tsx` — Form dialog create/edit
+* `components/delete-dialog.tsx` — Konfirmasi delete
+
+---
+
+# Current Progress
+
+## DONE ✅
+
+* Prisma setup + Neon setup
+* Prisma singleton (`lib/prisma.ts`)
+* User model
+* NextAuth v4 setup
+* Credentials login + JWT auth flow
+* Session typing
+* Middleware protection
+* Login flow
+* Dashboard foundation + shared layout
+* Sidebar system
+* TanStack Table installation
+* Reusable DataTable (`components/data-table/`) — LENGKAP
+* Reusable Form System (`components/form/`) — LENGKAP (pakai shadcn Field terbaru)
+* ProgramStudi — Prisma model + migration
+* ProgramStudi — types, get actions, columns
+
+## IN PROGRESS 🔄
+
+* Program Studi CRUD — tinggal: Zod schema, create/update/delete actions, form dialog, delete dialog
+
+## NEXT ⏭️
+
+1. Selesaikan Program Studi CRUD (schema + actions + form dialog)
+2. Mahasiswa CRUD
+3. Dosen CRUD
+4. Mata Kuliah CRUD
+5. Generic search/filter system (URL-based search params)
+6. Audit logging system
+7. Kelas & Jadwal
+8. KRS
+9. Nilai
 
 ---
 
@@ -163,154 +355,17 @@ constants/
 * Keep table generic and type-safe
 * Feature-specific columns must stay inside features/*
 * Avoid hardcoded business logic in reusable table
-* Use folder namespace architecture
-
-Preferred structure:
-
-components/data-table/
-  index.tsx
-  toolbar.tsx
-  pagination.tsx
-  search.tsx
-  empty-state.tsx
-  types.ts
 
 ---
 
 # Form Architecture Rules
 
-* Use React Hook Form
-* Use Zod validation
+* Use React Hook Form + Zod
 * Validate all server actions
 * Infer types from Zod
 * Never trust client input
-* Form fields should be reusable
-
-Preferred structure:
-
-components/form/
-  input-field.tsx
-  select-field.tsx
-  textarea-field.tsx
-  submit-button.tsx
-
----
-
-# Shadcn/UI Rules
-
-* Use shadcn/ui as primary UI system
-* Keep primitive UI components inside components/ui
-* Do not place business logic inside components/ui
-* Prefer composition over prop-heavy abstractions
-* Use cn() utility consistently
-* Prefer reusable UI primitives
-
-components/ui should only contain:
-
-* button
-* card
-* dialog
-* input
-* dropdown-menu
-* table
-* badge
-* avatar
-* etc
-
-Never place:
-
-* auth logic
-* database logic
-* business features
-* dashboard-specific logic
-
-inside primitive UI components.
-
----
-
-# Program Studi Architecture
-
-Current institution target:
-
-* STMIK / Sekolah Tinggi
-
-Current academic structure:
-
-* Program Studi based structure
-* No Fakultas abstraction for now
-* Avoid premature multi-institution abstraction
-
-Example:
-
-* Teknik Informatika
-* Sistem Informasi
-* Bisnis Digital
-
----
-
-# UI Rules
-
-* Responsive by default
-* Consistent spacing
-* Consistent layout structure
-* Sidebar layout architecture required
-* Use loading.tsx when appropriate
-* Use skeleton loading states
-* Avoid layout shift
-
-Dashboard pages should follow:
-
-Header
-Sidebar
-Content Container
-Page Title
-Actions
-Content
-
----
-
-# Code Style Rules
-
-## Prefer
-
-* early returns
-* reusable functions
-* feature modularization
-* server-first patterns
-* composition over inheritance
-* small components
-
-## Avoid
-
-* overengineering
-* giant client components
-* deep prop drilling
-* unnecessary abstractions
-* premature optimization
-
----
-
-# Auth Architecture
-
-Correct structure:
-
-auth.ts
-→ authOptions export
-
-session.ts
-→ getServerSession helper
-
-middleware.ts
-→ route protection only
-
-route.ts
-→ NextAuth(authOptions)
-
-Never use:
-
-* Auth.js v5 syntax
-* auth() helper from v5
-* Prisma Adapter
+* Form fields should be reusable (sudah ada di components/form/)
+* WAJIB gunakan shadcn Field terbaru — bukan FormField lama
 
 ---
 
@@ -322,83 +377,6 @@ Never use:
 * Never trust frontend authorization
 * Never commit .env
 * Keep database access server-only
-
----
-
-# Performance Rules
-
-* Prefer server rendering
-* Avoid unnecessary client state
-* Avoid unnecessary client providers
-* Keep middleware lightweight
-* Keep JWT callback lightweight
-* Use Prisma select optimization
-* Minimize use client usage
-* Use streaming/loading boundaries properly
-
----
-
-# Development Workflow
-
-## Branching
-
-main
-→ production/demo branch
-
-dev
-→ active development branch
-
-feature/*
-→ isolated feature development
-
----
-
-## Commit Convention
-
-feat:
-fix:
-refactor:
-style:
-chore:
-
----
-
-# Current Progress
-
-DONE:
-
-* Prisma setup
-* Neon setup
-* Prisma singleton
-* User model
-* NextAuth v4 setup
-* Credentials login
-* JWT auth flow
-* Session typing
-* Middleware protection
-* Login flow testing
-* Dashboard foundation
-* Shared dashboard layout
-* Sidebar system foundation
-* TanStack Table installation
-* Reusable DataTable structure
-
-IN PROGRESS:
-
-* Reusable DataTable implementation
-* Reusable form system
-* Program Studi architecture
-* CRUD foundation
-
-NEXT:
-
-* Program Studi CRUD
-* Mahasiswa CRUD
-* Dosen CRUD
-* Mata Kuliah CRUD
-* Server Action patterns
-* Generic search/filter system
-* Audit logging system
 
 ---
 
