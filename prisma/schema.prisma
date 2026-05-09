@@ -31,12 +31,13 @@ enum DegreeType {
   S2
 }
 
-model ProgramStudy {
+model ProgramStudi {
   id        String   @id @default(cuid())
-  code      String   @unique
-  name      String
-  degree    DegreeType
-
+  kode      String   @unique
+  nama      String
+  jenjang   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("program_studi")
 }
